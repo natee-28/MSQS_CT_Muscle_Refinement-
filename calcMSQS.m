@@ -2,12 +2,33 @@ function QA = calcMSQS(Image_CT, Mask_Fa, Y, spacing)
 
 Y = logical(Y);
 Mask_Fa = logical(Mask_Fa);
+
 % Body wall distance map
 distFromSkin = bwdist(~Mask_Fa);
 
 % กำหนด central/deep region ที่ไม่น่าจะเป็น abdominal wall muscle
 % ปรับค่า 45-70 pixel ตามภาพ 512x512
 central_region = Mask_Fa & distFromSkin > 60;
+central_raw = Y & central_region;
+
+% หา component ของ Y
+CC = bwconncomp(Y);
+L = labelmatrix(CC);
+
+central_bad = false(size(Y));
+
+for i = 1:CC.NumObjects
+    comp = (L == i);
+
+    comp_area = sum(comp(:));
+    comp_central = sum(comp(:) & central_region(:)) / max(comp_area,1);
+
+    % ถ้า component อยู่ central มาก และมีขนาดเล็ก/แยกเดี่ยว ค่อยถือว่าผิด
+    if comp_central > 0.60 && comp_area < 3000
+        central_bad = central_bad | comp;
+    end
+end
+
 wall_band = Mask_Fa & distFromSkin <= 45;
 
 % posterior muscle อาจลึกกว่า ให้เปิดพื้นที่ด้านหลังไว้
@@ -25,10 +46,10 @@ MuscleCandidate = ...
     anatomic_muscle_zone;
 
 % ถ้า Y เข้า central region มาก ให้ถือว่า leakage
-central_leak = Y & central_region;
-
+%central_leak = Y & central_region;
+central_leak = central_bad;
 central_leak_ratio = sum(central_leak(:)) / max(sum(Y(:)),1);
-central_leak_score = max(0, 100 * (1 - central_leak_ratio * 8));
+central_leak_score = max(0, 100 * (1 - central_leak_ratio * 10));
 
 MuscleHU = MuscleCandidate; %(Image_CT > -50) & (Image_CT < 150) & Mask_Fa;
 organ_leak = Y & ~anatomic_muscle_zone & Mask_Fa;
@@ -37,12 +58,44 @@ organ_leak_score = max(0, 100 * (1 - organ_leak_ratio * 10));
 
 leak_pixels = Y & ~MuscleHU;
 leak_ratio = sum(leak_pixels(:)) / max(sum(Y(:)),1);
-leak_score = max(0, 100 * (1 - leak_ratio * 5));
+leak_score = max(0, 100 * (1 - leak_ratio * 5.0));
 
-Y_dil = imdilate(Y, strel('disk',8));
-missing_pixels = MuscleHU & Y_dil & ~Y;
-missing_ratio = sum(missing_pixels(:)) / max(sum(MuscleHU & Y_dil,'all'),1);
-missing_score = max(0, 100 * (1 - missing_ratio * 3));
+%Y_dil = imdilate(Y, strel('disk',8));
+nearY = imdilate(Y, strel('disk',10)) & ~Y;
+raw_missing = MuscleCandidate & nearY;
+% ตัดเส้นบาง ๆ รอบ body wall ออก
+raw_missing = imopen(raw_missing, strel('disk',2));
+
+% เอาเฉพาะก้อนที่ใหญ่พอ
+raw_missing = bwareaopen(raw_missing, 250);
+
+% เอาเฉพาะก้อนที่อยู่ใกล้ Y จริง ๆ
+CCm = bwconncomp(raw_missing);
+Lm = labelmatrix(CCm);
+
+%missing_pixels = MuscleCandidate & nearY;
+missing_pixels = false(size(Y));
+
+for i = 1:CCm.NumObjects
+    comp = (Lm == i);
+
+    % ต้องอยู่ติดกับ Y หลัง dilate
+    touchY = any((imdilate(comp, strel('disk',3)) & Y), 'all');
+
+    compArea = sum(comp(:));
+
+    if touchY && compArea > 250
+        missing_pixels = missing_pixels | comp;
+    end
+end
+
+
+%missing_pixels = bwareaopen(missing_pixels,150);
+
+%missing_pixels = MuscleHU & Y_dil & ~Y;
+missing_ratio = sum(missing_pixels(:)) / max(sum(Y(:)),1);
+%missing_ratio = sum(missing_pixels(:)) / max(sum(MuscleHU & Y_dil,'all'),1);
+missing_score = max(0, 100 * (1 - missing_ratio * 1.0));
 
 CC = bwconncomp(Y);
 numComp = CC.NumObjects;
