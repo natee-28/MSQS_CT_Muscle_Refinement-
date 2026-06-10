@@ -64,7 +64,7 @@ figure;
 plot(thetaSort,RQA.segmentDensity(idx),'.-');
 xlabel('Theta ref (degree)');
 ylabel('Segment density');
-title('Muscle occupancy along ray');\
+title('Muscle occupancy along ray');
 %% .....
 RQA = radialConsistencyScore(Mask_Fa,Y_final);
 [thetaSort,idx] = sort(RQA.thetaRef);
