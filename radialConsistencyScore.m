@@ -4,8 +4,8 @@ if nargin < 3
     opts = struct();
 end
 
-if ~isfield(opts,'nAngles'), opts.nAngles = 180; end
-if ~isfield(opts,'smoothWin'), opts.smoothWin = 9; end
+if ~isfield(opts,'nAngles'), opts.nAngles = 360; end
+if ~isfield(opts,'smoothWin'), opts.smoothWin = 15; end
 if ~isfield(opts,'minSegmentPx'), opts.minSegmentPx = 3; end
 
 Mask_Fa = logical(Mask_Fa);
@@ -131,6 +131,32 @@ leftLat   = thetaRef >= 225 & thetaRef < 315;
 outerResidual = rOuterN - rOuterFit;
 innerResidual = rInnerN - rInnerFit;
 thickResidual = thickN - thickFit;
+% ===== Inner boundary leakage / missing detector =====
+% innerResidual < 0 = inner boundary goes deeper than expected
+% possible attached leakage into organ/soft tissue
+% innerResidual > 0 = inner boundary is shallower than expected
+% possible missing / under-segmentation
+
+innerLeakPx = innerResidual .* bodyR;
+innerMissPx = innerResidual .* bodyR;
+
+innerLeakRay = innerLeakPx < -5;   % attached leakage candidate
+innerMissRay = innerMissPx > 5;    % missing candidate
+
+% remove isolated single-ray noise
+innerLeakRay = innerLeakRay & ~posterior;
+innerMissRay = innerMissRay & ~posterior;
+
+innerLeakThetaRef = thetaRef(innerLeakRay);
+innerMissThetaRef = thetaRef(innerMissRay);
+
+inner_leak_ratio = mean(innerLeakRay,'omitnan');
+inner_miss_ratio = mean(innerMissRay,'omitnan');
+
+inner_leak_score = max(0, 100 * (1 - inner_leak_ratio * 10));
+inner_miss_score = max(0, 100 * (1 - inner_miss_ratio * 10));
+%innerLeakResidual = min(innerResidual,0);
+%innerMissResidual = max(innerResidual,0);
 
 outerErr = abs(outerResidual);
 thickErr = abs(thickResidual);
@@ -150,6 +176,7 @@ nonPosteriorMultiRatio = mean(multiSegNonPosterior,'omitnan');
 
 transition_score = max(0, 100 * (1 - nonPosteriorMultiRatio * 4));
 
+
 %% ===== Add to output =====
 RQA.thetaDeg = thetaDeg;
 RQA.thetaRef = thetaRef;
@@ -162,6 +189,21 @@ RQA.zone.leftLat = leftLat;
 RQA.outerResidual = outerResidual;
 RQA.innerResidual = innerResidual;
 RQA.thickResidual = thickResidual;
+
+RQA.innerLeakPx = innerLeakPx;
+RQA.innerMissPx = innerMissPx;
+
+RQA.innerLeakRay = innerLeakRay;
+RQA.innerMissRay = innerMissRay;
+
+RQA.innerLeakThetaRef = innerLeakThetaRef;
+RQA.innerMissThetaRef = innerMissThetaRef;
+
+RQA.inner_leak_ratio = inner_leak_ratio;
+RQA.inner_miss_ratio = inner_miss_ratio;
+
+RQA.inner_leak_score = inner_leak_score;
+RQA.inner_miss_score = inner_miss_score;
 
 RQA.radial_outer_score = radial_outer_score;
 RQA.radial_thick_score = radial_thick_score;

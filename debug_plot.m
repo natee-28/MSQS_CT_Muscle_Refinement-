@@ -44,6 +44,14 @@ fprintf('Thickness score   : %.1f\n', RQA.radial_thick_score);
 fprintf('Transition score  : %.1f\n', RQA.transition_score);
 fprintf('Posterior multi   : %.3f\n', RQA.posteriorMultiRatio);
 fprintf('Non-post multi    : %.3f\n', RQA.nonPosteriorMultiRatio);
+fprintf('inner_leak_score   : %.3f\n', RQA.inner_leak_score);
+fprintf('inner_miss_score   : %.3f\n', RQA.inner_miss_score);
+fprintf('inner_leak_ratio   : %.3f\n', RQA.inner_leak_ratio);
+fprintf('inner_miss_ratio   : %.3f\n', RQA.inner_miss_ratio);
+
+
+
+
 %% ......................
 RQA = radialConsistencyScore(Mask_Fa,Y_final);
 [thetaSort,idx] = sort(RQA.thetaRef);
@@ -85,3 +93,15 @@ plot(thetaSort,...
 yline(0,'k--');
 xlabel('Theta ref');
 ylabel('Density residual');
+
+%% ... 
+[thetaSort,idx] = sort(RQA.thetaRef);
+
+figure;
+plot(thetaSort,RQA.innerLeakPx(idx),'.-');
+hold on;
+yline(-5,'r--');
+yline(5,'r--');
+xlabel('Theta ref');
+ylabel('Inner boundary error (px)');
+title('Inner boundary error by angle');
