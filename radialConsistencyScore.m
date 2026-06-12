@@ -96,7 +96,7 @@ thickN  = yThickness ./ bodyR;
 rInnerFit = smoothdata(rInnerN,'movmedian',opts.smoothWin,'omitnan');
 rOuterFit = smoothdata(rOuterN,'movmedian',opts.smoothWin,'omitnan');
 thickFit  = smoothdata(thickN,'movmedian',opts.smoothWin,'omitnan');
-densityFit = smoothdata(thickN,'movmedian',...
+densityFit = smoothdata(segmentDensity,'movmedian',...
     opts.smoothWin,'omitnan');
 
 densityResidual = thickN - densityFit;
@@ -120,8 +120,8 @@ RQA.densityResidual = densityResidual;
 
 %% ===== Angle reference and anatomical sectors =====
 thetaDeg = mod(rad2deg(theta),360);
-thetaRef = mod(thetaDeg + 60,360);  % adjust anatomical reference
-
+%thetaRef = mod(thetaDeg + 60,360);  % adjust anatomical reference
+thetaRef = thetaDeg;
 anterior  = thetaRef < 45 | thetaRef >= 315;
 rightLat  = thetaRef >= 45  & thetaRef < 135;
 posterior = thetaRef >= 135 & thetaRef < 225;
