@@ -1,5 +1,6 @@
 function RQA = radialConsistencyScore(Mask_Fa, Y, opts)
 
+%% ...add starts{k} and end{k} ..16/6/2569 
 if nargin < 3
     opts = struct();
 end
@@ -30,6 +31,9 @@ maxSegLen = zeros(size(theta));
 meanSegLen = zeros(size(theta));
 smallSegCount = zeros(size(theta));
 segmentDensity = zeros(size(theta));
+segStarts = cell(size(theta));
+segEnds   = cell(size(theta));
+segLens   = cell(size(theta));
 
 maxR = hypot(H,W);
 
@@ -74,12 +78,19 @@ for k = 1:numel(theta)
     ends = ends(keep);
     segLen = segLen(keep);
 
+    segStarts{k} = starts;
+    segEnds{k}   = ends;
+    segLens{k}   = segLen;
+
     nYSegments(k) = numel(starts);
+
     if ~isempty(segLen)
         maxSegLen(k) = max(segLen);
         meanSegLen(k) = mean(segLen);
         smallSegCount(k) = sum(segLen < 8);
         segmentDensity(k) = sum(segLen) / max(bodyR(k),1);
+        segStartR{k} = rr(starts);
+        segEndR{k}   = rr(ends);
    
         yInner(k) = rr(starts(1));
         yOuter(k) = rr(ends(end));
@@ -117,15 +128,20 @@ RQA.smallSegCount = smallSegCount;
 RQA.segmentDensity = segmentDensity;
 RQA.densityFit = densityFit;
 RQA.densityResidual = densityResidual;
+RQA.segStarts = segStarts;
+RQA.segEnds   = segEnds;
+RQA.segLens   = segLens;
+RQA.segStartR = segStartR;
+RQA.segEndR   = segEndR;
 
 %% ===== Angle reference and anatomical sectors =====
 thetaDeg = mod(rad2deg(theta),360);
 %thetaRef = mod(thetaDeg + 60,360);  % adjust anatomical reference
 thetaRef = thetaDeg;
-anterior  = thetaRef < 45 | thetaRef >= 315;
-rightLat  = thetaRef >= 45  & thetaRef < 135;
-posterior = thetaRef >= 135 & thetaRef < 225;
-leftLat   = thetaRef >= 225 & thetaRef < 315;
+anterior  = thetaRef < 315 | thetaRef >= 225;
+rightLat  = thetaRef >= 315  & thetaRef < 45;
+posterior = thetaRef >= 45 & thetaRef < 135;
+leftLat   = thetaRef >= 135 & thetaRef < 225;
 
 %% ===== Residual analysis =====
 outerResidual = rOuterN - rOuterFit;

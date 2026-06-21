@@ -50,13 +50,7 @@ fprintf('inner_leak_score   : %.3f\n', RQA.inner_leak_score);
 fprintf('inner_miss_score   : %.3f\n', RQA.inner_miss_score);
 fprintf('inner_leak_ratio   : %.3f\n', RQA.inner_leak_ratio);
 fprintf('inner_miss_ratio   : %.3f\n', RQA.inner_miss_ratio);
-
-
-
-
 %%......................
-
-
 figure;
 plot(thetaSort,RQA.maxSegLen(idx),'.-');
 xlabel('Theta ref (degree)');
@@ -82,7 +76,6 @@ figure;
 plot(thetaSort,RQA.thickN(idx),'.-'); hold on;
 plot(thetaSort,RQA.densityFit(idx),...
     'LineWidth',2);
-
 xlabel('Theta ref');
 ylabel('Thickness Ratio');
 title('Muscle Density Signature');
@@ -90,7 +83,6 @@ title('Muscle Density Signature');
 figure;
 plot(thetaSort,...
     RQA.densityResidual(idx),'.-');
-
 yline(0,'k--');
 xlabel('Theta ref');
 ylabel('Density residual');
@@ -106,13 +98,13 @@ yline(5,'r--');
 xlabel('Theta ref');
 ylabel('Inner boundary error (px)');
 title('Inner boundary error by angle');
+
 %% ..
 RQA.innerLeakIdx = find(RQA.innerLeakRay);
 RQA.innerMissIdx = find(RQA.innerMissRay);
 figure;
 imshow(Image_CT,[-50 150]); axis image; colormap gray; hold on;
 visboundaries(Y_final,'Color','g','LineWidth',1);
-
 S = regionprops(Mask_Fa,'Centroid');
 C = S(1).Centroid;
 cx = C(1); cy = C(2);
@@ -144,6 +136,7 @@ for ii = 1:numel(RQA.innerMissIdx)
 end
 
 title('Inner anomaly rays using true index');
+
 %% ...
 figure;
 plot(RQA.thetaDeg,RQA.innerLeakPx,'.-');
@@ -153,19 +146,25 @@ plot(thetaSort,RQA.densityFit(idx).*50,...
     'LineWidth',2);
 xlabel('thetaDeg');
 ylabel('inner error px');
+
 %% ...
+densityGrad = abs(gradient(RQA.densityFit));
+figure;
 yyaxis left
 plot(RQA.thetaDeg,RQA.innerLeakPx,'.-');
 ylabel('Inner residual (px)');
 
+yyaxis right
+plot(RQA.thetaDeg,densityGrad(idx),'g','LineWidth',2)
+figure;
 yyaxis left
 plot(RQA.thetaDeg,RQA.densityFit(idx),'LineWidth',2);
 ylabel('Density signature');
 
-densityGrad = abs(gradient(RQA.densityFit));
+
 
 yyaxis right
-plot( RQA.thetaDeg,densityGrad(idx),'g','LineWidth',2)
+plot(RQA.thetaDeg,densityGrad(idx),'g','LineWidth',2)
 
 %% ..
 S = regionprops(Mask_Fa,'Centroid');
@@ -173,14 +172,16 @@ C = S(1).Centroid;
 cx = C(1);
 cy = C(2);
 figure;
-imshow(Image_CT.*Y,[-50 150]); axis image; colormap gray; hold on;
+imshow(Image_CT,[-50 150]); axis image; colormap gray; hold on;
 visboundaries(Y_final,'Color','g','LineWidth',1);
-susTheta = [23 50];
+susidx = [find(RQA.nYSegments>=2)]; 
 
-for tDeg = susTheta
+for ii = 1:numel(susidx)
+    k = susidx(ii);
     r = RQA.bodyR(k);
-    t = deg2rad(tDeg);
-
+    %t = deg2rad(tDeg);
+    t= RQA.theta(k);
+   
     x2 = cx + r*cos(t);
     y2 = cy + r*sin(t);
 
@@ -188,11 +189,12 @@ for tDeg = susTheta
         'y-','LineWidth',2);
 
     text(x2,y2,...
-        sprintf('%d',tDeg),...
+        sprintf('%.0f',RQA.thetaRef(k)),...
         'Color','y',...
         'FontSize',12,...
         'FontWeight','bold');
 end
+
 % Red = inner leak
 for ii = 1:numel(RQA.innerLeakIdx)
     k = RQA.innerLeakIdx(ii);
@@ -204,9 +206,181 @@ for ii = 1:numel(RQA.innerLeakIdx)
 
     plot([cx x2],[cy y2],'r-','LineWidth',1.5);
     text(x2,y2,sprintf('%.0f',RQA.thetaRef(k)),'Color','y');
+    
 end
 
+%% ..
+S = regionprops(Mask_Fa,'Centroid');
+C = S(1).Centroid;
+cx = C(1);
+cy = C(2);
+
+figure;
+imshow(Image_CT,[-50 150]); axis image; colormap gray; hold on;
+visboundaries(Y_final,'Color','g','LineWidth',1);
+idx = [find(RQA.nYSegments == 1)];
+
+for ii = 1:numel(idx)
+    k = idx(ii);
+
+    t = RQA.theta(k);
+    r = RQA.bodyR(k);
+
+    x2 = cx + r*cos(t);
+    y2 = cy + r*sin(t);
+
+    plot([cx x2],[cy y2],'r-','LineWidth',1.5);
+    text(x2,y2,sprintf('%.0f',RQA.thetaRef(k)),'Color','r');
+end
 %{
+idx = find(~cellfun(@isempty, RQA.segStartR));
+
+for ii = 1:numel(idx)
+    k = idx(ii);
+
+    t = RQA.theta(k);
+    r = RQA.bodyR(k);
+
+    x2 = cx + r*cos(t);
+    y2 = cy + r*sin(t);
+
+    plot([cx x2],[cy y2],'r-','LineWidth',1.5);
+    text(x2,y2,sprintf('%.0f',RQA.thetaRef(k)),'Color','r');
+end
+%}
+%% ......
+S = regionprops(Mask_Fa,'Centroid');
+C = S(1).Centroid;
+cx = C(1);
+cy = C(2);
+figure;
+imshow(Image_CT.*Y,[-50 150]); axis image; colormap gray; hold on;
+visboundaries(Y_final,'Color','g','LineWidth',1);
+idx = [find(RQA.nYSegments >=2)];
+for ii = 1:numel(idx)
+    k = idx(ii);
+
+    t = RQA.theta(k);
+    r = RQA.bodyR(k);
+
+    x2 = cx + r*cos(t);
+    y2 = cy + r*sin(t);
+
+    plot([cx x2],[cy y2],'r-','LineWidth',1.5);
+    text(x2,y2,sprintf('%.0f',RQA.thetaRef(k)),'Color','r');
+end
+
+for k = 1:numel(RQA.segStartR)
+
+    starts = RQA.segStartR{k};
+    ends   = RQA.segEndR{k};
+
+    if isempty(starts)
+        continue
+    end
+
+    t = RQA.theta(k);
+
+    for j = 1:numel(starts)
+
+        r1 = starts(j);
+        r2 = ends(j);
+
+        x1 = cx + r1*cos(t);
+        y1 = cy + r1*sin(t);
+
+        x2 = cx + r2*cos(t);
+        y2 = cy + r2*sin(t);
+
+        plot(x1,y1,'go','MarkerFaceColor','g')
+        plot(x2,y2,'bo','MarkerFaceColor','b')
+
+    end
+
+end
+%% ... 
+S = regionprops(Mask_Fa,'Centroid');
+C = S(1).Centroid;
+cx = C(1);
+cy = C(2);
+figure;
+%imshow(Image_CT.*Y,[-50 150]); axis image; colormap gray; hold on;
+%visboundaries(Y_final,'Color','g','LineWidth',1);
+%susTheta = [find(RQA.nYSegments>=2)];
+
+plot(RQA.thetaRef,...
+     RQA.rInnerFit.*RQA.bodyR,...
+     'k','LineWidth',2)
+
+hold on
+
+for k=1:numel(RQA.segStartR)
+
+    s = RQA.segStartR{k};
+
+    for j=1:numel(s)
+
+        plot(RQA.thetaRef(k),...
+             s(j),...
+             'ro')
+    end
+
+end
+%% ..............
+
+Rref = RQA.rInnerFit .* RQA.bodyR;
+
+Dstart = cell(size(RQA.segStartR));
+
+for k = 1:numel(RQA.segStartR)
+
+    s = RQA.segStartR{k};
+
+    if isempty(s) || isnan(Rref(k))
+        Dstart{k} = [];
+        continue
+    end
+
+    Dstart{k} = s - Rref(k);
+
+end
+
+RQA.DstartToBand = Dstart;
+idx = find(RQA.nYSegments >= 2);
+%idx = find(RQA.nYSegments >= 2);
+
+for ii = 1:numel(idx)
+    k = idx(ii);
+
+    segID  = (1:numel(RQA.segStartR{k}))';
+    startR = RQA.segStartR{k}(:);
+    endR   = RQA.segEndR{k}(:);
+    dStart = RQA.DstartToBand{k}(:);
+
+    fprintf('\nRay %d, theta %.1f\n', k, RQA.thetaRef(k));
+
+    T = table(segID, startR, endR, dStart, ...
+        'VariableNames', {'Segment','StartR','EndR','Dstart'});
+
+    disp(T)
+end
+%{
+T_remove = 5;  % px, เริ่มต้นก่อน
+
+for k = 1:numel(RQA.segStartR)
+
+    D = RQA.DstartToBand{k};
+
+    if isempty(D)
+        continue
+    end
+
+    keepSeg   = abs(D) <= T_remove;
+    removeSeg = D > T_remove;
+
+end
+
+
 RQA.innerLeakIdx = find(RQA.innerLeakRay);
 RQA.innerMissIdx = find(RQA.innerMissRay);
 S = regionprops(Mask_Fa,'Centroid');
