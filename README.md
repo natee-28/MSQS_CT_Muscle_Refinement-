@@ -1,7 +1,7 @@
 # MSQS-RQA Development Plan
 ## Example Output
 
-![Quick DICOM Preview](Screenshot 2026-06-20 143223.png)
+![Quick DICOM Preview](sp.png)
 
 ## Project Title
 
