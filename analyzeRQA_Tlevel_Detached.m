@@ -171,9 +171,10 @@ end
 Ytmp = Y & ~RemoveRegion;   % ตัด sector ก่อน
 
 CC = bwconncomp(Ytmp);
+Yrev = false(size(Y));
+%{
 stats = regionprops(CC,'Area');
 
-Yrev = false(size(Y));
 
 for c = 1:CC.NumObjects
     if stats(c).Area >= opts.minKeepArea
@@ -182,6 +183,32 @@ for c = 1:CC.NumObjects
 end
 
 %Yrev = Ytmp & ~RemoveComponent;
+%}
+
+for c = 1:CC.NumObjects
+    pix = CC.PixelIdxList{c};
+
+    A = numel(pix);
+
+    [yy,xx] = ind2sub(size(Y),pix);
+    rr = sqrt((xx-cx).^2 + (yy-cy).^2);
+
+    meanR = mean(rr);
+    maxR  = max(rr);
+
+    % expected reference from segment2 or body scale
+    rRef = opts.rMuscleRefPx;  % เช่น median/mean startR ของ segment2 ที่เชื่อได้
+
+    keepByArea = A >= opts.minKeepArea;
+    keepByRadius = meanR >= opts.radiusFrac * rRef;      % เช่น 0.75–0.85
+    keepByOuter = maxR >= opts.outerFrac * rRef;         % เช่น 0.9
+
+    if keepByArea || (keepByRadius && keepByOuter)
+        Yrev(pix) = true;
+    end
+end
+
+
 
 %% ...OUT structure ...
 OUT = struct();
